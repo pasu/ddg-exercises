@@ -46,7 +46,7 @@ class DiscreteExteriorCalculusTest : public ::testing::Test {
         std::vector<std::array<double, 3>> v;
         std::vector<std::array<int, 3>> f;
 
-        std::string filepath = "../include/test-dec-soln.txt";
+        std::string filepath = "D://code//DDG//ddg-exercises//projects//discrete-exterior-calculus//include//test-dec-soln.txt";
         std::ifstream input_file(filepath);
         std::string line;
         std::string X;

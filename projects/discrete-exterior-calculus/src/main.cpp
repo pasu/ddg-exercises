@@ -242,7 +242,7 @@ void showDiagram() {
 
     if (image.texture == 0) {
         char filename[256];
-        snprintf(filename, sizeof(filename), "../../../imgs/dec%d.png", currentFormName + 1);
+        snprintf(filename, sizeof(filename), "D://code//DDG//ddg-exercises//imgs//dec%d.png", currentFormName + 1);
         bool ret = LoadTextureFromFile(filename, &image.texture, &image.width, &image.height);
         IM_ASSERT(ret);
     }
@@ -798,7 +798,7 @@ int main(int argc, char** argv) {
     }
 
     // If a mesh name was not given, use default mesh.
-    std::string filepath = "../../../input/hexagon.obj";
+    std::string filepath = "D:\\code\\DDG\\ddg-exercises\\input\\hexagon.obj";
     if (inputFilename) {
         filepath = args::get(inputFilename);
     }

@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
     }
 
     // If a mesh name was not given, use default mesh.
-    std::string filepath = "../../../input/bunny.obj";
+    std::string filepath = "D://code//DDG//ddg-exercises//input//bunny.obj";
     if (inputFilename) {
         filepath = args::get(inputFilename);
     }

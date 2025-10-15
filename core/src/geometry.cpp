@@ -80,8 +80,26 @@ double VertexPositionGeometry::totalArea() const {
  */
 double VertexPositionGeometry::cotan(Halfedge he) const {
 
-    // TODO
-    return 0; // placeholder
+    // Get the three vertices of the triangle
+    Vector3 a = inputVertexPositions[he.next().tipVertex()];
+    Vector3 b = inputVertexPositions[he.tailVertex()];
+    Vector3 c = inputVertexPositions[he.tipVertex()];
+
+    // Compute vectors from vertex a
+    Vector3 u = b - a;
+    Vector3 v = c - a;
+
+    // Compute dot product and cross product magnitude
+    double dotUV = dot(u, v);
+    double crossNorm = cross(u, v).norm();
+
+    // Handle degenerate triangles to avoid division by zero
+    if (crossNorm < std::numeric_limits<double>::epsilon()) {
+        // Return 0 for degenerate triangles (cot(90°) = 0)
+        return 0.0;
+    }
+
+    return dotUV / crossNorm;
 }
 
 /*
@@ -93,7 +111,11 @@ double VertexPositionGeometry::cotan(Halfedge he) const {
 double VertexPositionGeometry::barycentricDualArea(Vertex v) const {
 
     // TODO
-    return 0; // placeholder
+    double totalArea = 0.0;
+    for (Face f : v.adjacentFaces()) {
+		totalArea += faceArea(f);
+	}
+    return totalArea / 3.0;
 }
 
 /*
@@ -106,7 +128,19 @@ double VertexPositionGeometry::barycentricDualArea(Vertex v) const {
 double VertexPositionGeometry::angle(Corner c) const {
 
     // TODO
-    return 0; // placeholder
+    Halfedge he = c.halfedge();
+    Vector3 pA = inputVertexPositions[he.vertex()];
+    he = he.next();
+    Vector3 pB = inputVertexPositions[he.vertex()];
+    he = he.next();
+    Vector3 pC = inputVertexPositions[he.vertex()];
+
+    GC_SAFETY_ASSERT(he.next() == c.halfedge(), "faces mush be triangular");
+
+    double q = dot(unit(pB - pA), unit(pC - pA));
+    q = clamp(q, -1.0, 1.0);
+    double angle = std::acos(q);
+    return angle;
 }
 
 /*
@@ -117,8 +151,18 @@ double VertexPositionGeometry::angle(Corner c) const {
  */
 double VertexPositionGeometry::dihedralAngle(Halfedge he) const {
 
-    // TODO
-    return 0; // placeholder
+    if (he.edge().isBoundary() || !he.edge().isManifold()) {
+        return 0.;
+    }
+
+    Vector3 N1 = faceNormal(he.face());
+    Vector3 N2 = faceNormal(he.sibling().face());
+    Vector3 pTail = inputVertexPositions[he.vertex()];
+    Vector3 pTip = inputVertexPositions[he.next().vertex()];
+    Vector3 edgeDir = unit(pTip - pTail);
+
+    double dihedralAngle = atan2(dot(edgeDir, cross(N1, N2)), dot(N1, N2));
+    return dihedralAngle;
 }
 
 /*
@@ -142,7 +186,14 @@ Vector3 VertexPositionGeometry::vertexNormalEquallyWeighted(Vertex v) const {
 Vector3 VertexPositionGeometry::vertexNormalAngleWeighted(Vertex v) const {
 
     // TODO
-    return {0, 0, 0}; // placeholder
+    Vector3 vertexNormal = Vector3::zero();
+    for (Corner c : v.adjacentCorners()) {
+        // vertexNormal += faceNormal(c.halfedge().face()) * angle(c);
+        if (c.vertex() == v) {
+            vertexNormal += faceNormal(c.halfedge().face()) * angle(c);
+        }
+    }
+    return unit(vertexNormal);
 }
 
 /*
@@ -154,7 +205,31 @@ Vector3 VertexPositionGeometry::vertexNormalAngleWeighted(Vertex v) const {
 Vector3 VertexPositionGeometry::vertexNormalSphereInscribed(Vertex v) const {
 
     // TODO
-    return {0, 0, 0}; // placeholder
+    Vector3 vertexNormal = Vector3::zero();
+    for (Corner c : v.adjacentCorners()) {
+        //
+        //       i
+        //      /  \ half
+        //     /    \ edge
+        //    j ---- k
+        Halfedge he = c.halfedge();
+        Vector3 pi = inputVertexPositions[he.vertex()];
+        he = he.next();
+        Vector3 pj = inputVertexPositions[he.vertex()];
+        he = he.next();
+        Vector3 pk = inputVertexPositions[he.vertex()];
+
+        Vector3 eij = pj - pi;
+        Vector3 eik = pk - pi;
+
+        Vector3 cross_product = cross(eij, eik);
+
+        double eij_norm = eij.norm();
+        double eik_norm = eik.norm();
+
+        vertexNormal += cross_product / (eij_norm * eik_norm) / (eij_norm * eik_norm);
+    }
+    return unit(vertexNormal);
 }
 
 /*
@@ -166,7 +241,11 @@ Vector3 VertexPositionGeometry::vertexNormalSphereInscribed(Vertex v) const {
 Vector3 VertexPositionGeometry::vertexNormalAreaWeighted(Vertex v) const {
 
     // TODO
-    return {0, 0, 0}; // placeholder
+    Vector3 vertexNormal = Vector3::zero();
+    for (Face f : v.adjacentFaces()) {
+        vertexNormal += faceNormal(f) * faceArea(f);
+    }
+    return unit(vertexNormal);
 }
 
 /*
@@ -178,7 +257,15 @@ Vector3 VertexPositionGeometry::vertexNormalAreaWeighted(Vertex v) const {
 Vector3 VertexPositionGeometry::vertexNormalGaussianCurvature(Vertex v) const {
 
     // TODO
-    return {0, 0, 0}; // placeholder
+    Vector3 vertexNormal = Vector3::zero();
+    for (Halfedge he : v.outgoingHalfedges()) {
+
+        Vector3 pi = inputVertexPositions[he.vertex()];
+        Vector3 pj = inputVertexPositions[he.twin().vertex()];
+        Vector3 eij = pj - pi;
+        vertexNormal += dihedralAngle(he) * unit(eij);
+    }
+    return unit(vertexNormal);
 }
 
 /*
@@ -190,7 +277,14 @@ Vector3 VertexPositionGeometry::vertexNormalGaussianCurvature(Vertex v) const {
 Vector3 VertexPositionGeometry::vertexNormalMeanCurvature(Vertex v) const {
 
     // TODO
-    return {0, 0, 0}; // placeholder
+    Vector3 vertexNormal = Vector3::zero();
+    for (Halfedge he : v.outgoingHalfedges()) {
+        Vector3 pi = inputVertexPositions[he.vertex()];
+        Vector3 pj = inputVertexPositions[he.twin().vertex()];
+        Vector3 eij = pj - pi;
+        vertexNormal += (cotan(he) + cotan(he.twin())) * eij;
+    }
+    return unit(vertexNormal);
 }
 
 /*
@@ -202,7 +296,11 @@ Vector3 VertexPositionGeometry::vertexNormalMeanCurvature(Vertex v) const {
 double VertexPositionGeometry::angleDefect(Vertex v) const {
 
     // TODO
-    return 0; // placeholder
+    double angleDefect = 0.0;
+    for (Corner c : v.adjacentCorners()) {
+        angleDefect += angle(c);
+    }
+    return 2 * PI - angleDefect;
 }
 
 /*
@@ -214,7 +312,8 @@ double VertexPositionGeometry::angleDefect(Vertex v) const {
 double VertexPositionGeometry::totalAngleDefect() const {
 
     // TODO
-    return 0; // placeholder
+    int chi = eulerCharacteristic();
+    return 2 * PI * (chi);
 }
 
 /*
@@ -226,7 +325,13 @@ double VertexPositionGeometry::totalAngleDefect() const {
 double VertexPositionGeometry::scalarMeanCurvature(Vertex v) const {
 
     // TODO
-    return 0; // placeholder
+    double meanCurvature = 0.;
+    for (Halfedge he : v.outgoingHalfedges()) {
+        double len = edgeLength(he.edge());
+        double alpha = edgeDihedralAngle(he.edge());
+        meanCurvature += alpha * len / 2.;
+    }
+    return meanCurvature;
 }
 
 /*
@@ -238,7 +343,33 @@ double VertexPositionGeometry::scalarMeanCurvature(Vertex v) const {
 double VertexPositionGeometry::circumcentricDualArea(Vertex v) const {
 
     // TODO
-    return 0; // placeholder
+    double area = 0.0;
+
+    for (Face f : v.adjacentFaces()) {
+        // find the halfedge that has tail == v
+        Halfedge he = f.halfedge();
+        while (he.vertex() != v) {
+            he = he.next();
+        }
+
+        // The other two vertices are:
+        //   j = he.tipVertex()
+        //   k = he.next().tipVertex()
+        // Edges from v to j and v to k:
+        double vj = edgeLength(he.edge());               // i->j
+        double vk = edgeLength(he.next().next().edge()); // i->k
+
+        // Angles at j and k:
+        //  - angle at k is cotan(he)          (since he.edge() is opposite k)
+        //  - angle at j is cotan(he.next().next())
+        //      (since he.next().next().edge() is opposite j)
+        double cotAtK = cotan(he);
+        double cotAtJ = cotan(he.next().next()); // or possibly he.prev()
+
+        double contribution = (vj * vj * cotAtK + vk * vk * cotAtJ) / 8.0;
+        area += contribution;
+    }
+    return area;
 }
 
 /*
@@ -250,7 +381,14 @@ double VertexPositionGeometry::circumcentricDualArea(Vertex v) const {
 std::pair<double, double> VertexPositionGeometry::principalCurvatures(Vertex v) const {
 
     // TODO
-    return std::make_pair(0, 0); // placeholder
+    double A = circumcentricDualArea(v);
+    double H = scalarMeanCurvature(v) / A;
+    double K = angleDefect(v) / (A);
+
+    double k1 = H - std::sqrt(H * H - K);
+    double k2 = H + std::sqrt(H * H - K);
+
+    return std::make_pair(k1, k2);
 }
 
 
@@ -264,7 +402,23 @@ std::pair<double, double> VertexPositionGeometry::principalCurvatures(Vertex v) 
 SparseMatrix<double> VertexPositionGeometry::laplaceMatrix() const {
 
     // TODO
-    return identityMatrix<double>(1); // placeholder
+    double tikhonov = 1e-8;
+    SparseMatrix<double> L = SparseMatrix<double>(mesh.nVertices(), mesh.nVertices());
+    std::vector<Eigen::Triplet<double>> L_entries;
+
+    for (Vertex i : mesh.vertices()) {
+        double sum = 0;
+        for (Halfedge he : i.incomingHalfedges()) {
+
+            double cot = (cotan(he) + cotan(he.twin())) * 0.5;
+            L_entries.push_back(Eigen::Triplet<double>(i.getIndex(), he.vertex().getIndex(), -cot));
+            sum += cot;
+        }
+        L_entries.push_back(Eigen::Triplet<double>(i.getIndex(), i.getIndex(), sum + tikhonov));
+    }
+
+    L.setFromTriplets(L_entries.begin(), L_entries.end());
+    return L;
 }
 
 /*
@@ -276,7 +430,11 @@ SparseMatrix<double> VertexPositionGeometry::laplaceMatrix() const {
 SparseMatrix<double> VertexPositionGeometry::massMatrix() const {
 
     // TODO
-    return identityMatrix<double>(1); // placeholder
+    SparseMatrix<double> M = SparseMatrix<double>(mesh.nVertices(), mesh.nVertices());
+    for (Vertex v : mesh.vertices()) {
+        M.coeffRef(v.getIndex(), v.getIndex()) = barycentricDualArea(v);
+    }
+    return M;
 }
 
 /*

@@ -1,5 +1,6 @@
 // Implement member functions for MeanCurvatureFlow class.
 #include "mean-curvature-flow.h"
+#include "geometrycentral/numerical/linear_solvers.h"
 
 /* Constructor
  * Input: The surface mesh <inputMesh> and geometry <inputGeo>.
@@ -20,7 +21,11 @@ MeanCurvatureFlow::MeanCurvatureFlow(ManifoldSurfaceMesh* inputMesh, VertexPosit
 SparseMatrix<double> MeanCurvatureFlow::buildFlowOperator(const SparseMatrix<double>& M, double h) const {
 
     // TODO
-    return identityMatrix<double>(1); // placeholder
+    SparseMatrix<double> L = geometry->laplaceMatrix();
+
+    SparseMatrix<double> A = M + (h * L);
+
+    return A;
 }
 
 /*
@@ -34,7 +39,23 @@ void MeanCurvatureFlow::integrate(double h) {
     // TODO
     // Note: Geometry Central has linear solvers: https://geometry-central.net/numerical/linear_solvers/
     // Note: Update positions via geometry->inputVertexPositions
+    SparseMatrix<double> M = geometry->massMatrix();
+    SparseMatrix<double> A = buildFlowOperator(M, h);
+
+    std::vector<Vector<double>> positions(3, Vector<double>::Zero(mesh->nVertices()));
     for (Vertex v : mesh->vertices()) {
-        geometry->inputVertexPositions[v] = geometry->inputVertexPositions[v]; // placeholder
+        positions[0][v.getIndex()] = geometry->inputVertexPositions[v].x;
+        positions[1][v.getIndex()] = geometry->inputVertexPositions[v].y;
+        positions[2][v.getIndex()] = geometry->inputVertexPositions[v].z;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        positions[i] = M * positions[i];
+        positions[i] = solvePositiveDefinite(A, positions[i]);
+    }
+
+    for (Vertex v : mesh->vertices()) {
+        geometry->inputVertexPositions[v] = {positions[0][v.getIndex()], positions[1][v.getIndex()],
+                                             positions[2][v.getIndex()]};
     }
 }

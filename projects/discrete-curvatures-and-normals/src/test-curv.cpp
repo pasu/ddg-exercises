@@ -37,7 +37,7 @@ class DiscreteCurvaturesAndNormalsTest : public ::testing::Test {
         std::vector<Vector3> v;
         std::vector<std::array<int, 3>> f;
 
-        std::string filepath = "../include/test-curv-soln.txt";
+        std::string filepath = "D://code//DDG//ddg-exercises//projects//discrete-curvatures-and-normals//include//test-curv-soln.txt";
         std::ifstream input_file(filepath);
         std::string line;
         std::string X;

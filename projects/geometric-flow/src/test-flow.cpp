@@ -26,7 +26,7 @@ class MeanCurvatureFlowTest : public ::testing::Test {
         std::vector<Vector3> v;
         std::vector<std::array<int, 3>> f;
 
-        std::string filepath = "../include/test-flow-soln.txt";
+        std::string filepath = "D://code//DDG//ddg-exercises//projects//geometric-flow//include//test-flow-soln.txt";
         std::ifstream input_file(filepath);
         std::string line;
         std::string X;

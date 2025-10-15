@@ -21,7 +21,7 @@ class SimplicialComplexOperatorsTest : public ::testing::Test {
      */
     SimplicialComplexOperatorsTest() {
 
-        std::string filepath = "../../../input/bunny.obj";
+        std::string filepath = "D:\\code\\DDG\\ddg-exercises\\input\\bunny.obj";
         std::unique_ptr<ManifoldSurfaceMesh> mesh_uptr;
         std::unique_ptr<VertexPositionGeometry> geometry_uptr;
         std::tie(mesh_uptr, geometry_uptr) = readManifoldSurfaceMesh(filepath);

@@ -30,7 +30,7 @@ class ScalarPoissonProblemTest : public ::testing::Test {
         std::vector<Vector3> v;
         std::vector<std::array<int, 3>> f;
 
-        std::string filepath = "../include/test-spp-soln.txt";
+        std::string filepath = "D://code//DDG//ddg-exercises//projects//poisson-problem//include//test-spp-soln.txt";
         std::ifstream input_file(filepath);
         std::string line;
         std::string X;
